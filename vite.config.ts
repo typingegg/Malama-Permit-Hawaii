@@ -4,9 +4,8 @@ import path from 'path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  // THIS IS CRITICAL FOR GITHUB PAGES!
-  // It must match your repository name exactly, with the slashes.
-  base: '/Malama-Permit-Hawaii/', 
+  // The dot makes the asset paths relative, fixing the blank screen bug
+  base: './', 
   
   plugins: [react(), tailwindcss()],
   resolve: {
