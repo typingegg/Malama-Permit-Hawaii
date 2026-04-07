@@ -518,34 +518,6 @@ export default function App() {
     }
   };
 
-  const itineraryDescription = useMemo(() => {
-    if (selectedFeels.length === 0) return "Select your desired 'Flow' to receive a curated experience tailored to your unique travel palate.";
-
-    const feels = selectedFeels.map(f => f.toLowerCase());
-    
-    const descriptions: Record<string, string> = {
-      'romantic': "an intimate, elegantly paced selection of the islands' most enchanting vistas, ensuring every moment is seasoned with romance",
-      'adventurous': "a bold exploration of the island's most exhilarating landscapes, curated for those who seek the thrill of discovery",
-      'relaxed': "a gentle, unhurried pace designed to soothe the spirit and allow the island's natural rhythm to take the lead",
-      'cultural': "a deep immersion into the rich heritage and storied traditions of Hawaii, served with the respect and depth it deserves",
-      'nature': "a curated journey through the islands' most pristine natural wonders, highlighting the raw beauty of our volcanic home",
-      'energetic': "a high-spirited sequence of activities designed to invigorate and inspire, keeping your pulse perfectly aligned with the island's energy",
-      'family-friendly': "a thoughtfully balanced collection of experiences designed to delight every generation, ensuring a harmonious flow for your entire party"
-    };
-
-    let core = "";
-    if (feels.length === 1) {
-      core = descriptions[feels[0]] || `a bespoke sequence meticulously crafted with a focus on ${feels[0]}`;
-    } else if (feels.length > 1) {
-      const primary = descriptions[feels[0]] || feels[0];
-      const secondaryList = feels.slice(1).map(f => f === 'nature' ? 'natural beauty' : f === 'adventurous' ? 'adventure' : f === 'energetic' ? 'vibrant energy' : f);
-      const secondary = secondaryList.join(' and ');
-      core = `${primary}, while seamlessly integrating elements of ${secondary} to create a truly multi-layered experience`;
-    }
-
-    return `“Welcome. For your journey, I have curated ${core}. Much like a master chef balances flavors, we have balanced these destinations to ensure a sophisticated and memorable experience. Please, savor each moment.”`;
-  }, [selectedFeels]);
-
   const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }), []);
 
   const curateItinerary = async () => {
@@ -882,17 +854,13 @@ Return ONLY a JSON array of objects. Each object must have:
 
             {/* Your Itinerary Section */}
             <section className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                <div className="flex flex-col gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2 ml-1">
                     <Calendar size={18} className="text-[#5A5A40]" />
                     <h2 className="text-xl font-serif font-bold text-[#1A1A1A]">Your Itinerary</h2>
                   </div>
-                  <p className="text-xs italic text-[#5A5A40]/80 ml-1 max-w-2xl leading-relaxed">
-                    {itineraryDescription}
-                  </p>
-                </div>
-                {items.length > 0 && (
+                  {items.length > 0 && (
                     <button 
                       onClick={() => {
                         const allPoints = [];
@@ -913,6 +881,7 @@ Return ONLY a JSON array of objects. Each object must have:
                       Get Directions
                     </button>
                   )}
+                </div>
               </div>
 
               <div className="space-y-3">
