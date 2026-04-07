@@ -75,8 +75,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(Object.keys(DESTINATIONS_DATA)[0]);
   const [activeCategory, setActiveCategory] = useState<'All' | 'State Parks' | 'National Parks' | 'Museums & Culture' | 'Botanical Gardens' | 'Historic Sites'>('All');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // Wayfinding State
   const [startLocation, setStartLocation] = useState("");
   const [endLocation, setEndLocation] = useState("");
+  
   const [selectedFeels, setSelectedFeels] = useState<string[]>([]);
   const [isCurating, setIsCurating] = useState(false);
   const [islandPreference, setIslandPreference] = useState<string>("Honolulu (Oahu)");
@@ -98,22 +101,16 @@ export default function App() {
     }
   };
 
-  // ====== SIMULATED AI CURATOR (NO API KEY REQUIRED) ======
+  // ====== SIMULATED AI CURATOR ======
   const curateItinerary = async () => {
     if (selectedFeels.length === 0) return;
     setIsCurating(true);
     
     try {
-      // 1. Simulate a delay to make it feel like "AI" is thinking
       await new Promise(resolve => setTimeout(resolve, 1800));
 
-      // 2. Get destinations for the selected island
       const islandDestinations = DESTINATIONS_DATA[islandPreference] || [];
-      
-      // 3. Simple Mock Logic: Shuffle the array to get random places
       const shuffled = [...islandDestinations].sort(() => 0.5 - Math.random());
-      
-      // 4. Pick 2 or 3 items depending on what's available
       const numItems = Math.min(Math.floor(Math.random() * 2) + 2, shuffled.length); 
       const selectedPlan = shuffled.slice(0, numItems);
 
@@ -123,23 +120,16 @@ export default function App() {
       
       selectedPlan.forEach((dest, index) => {
         const itemDate = new Date(now);
-        // Space out activities by 3 hours
         itemDate.setHours(startHour + (index * 3), startMin, 0, 0);
-        
         const tzOffset = itemDate.getTimezoneOffset() * 60000;
         const localISOTime = (new Date(itemDate.getTime() - tzOffset)).toISOString().slice(0, 16);
 
-        curatedItems.push({
-          ...dest,
-          dateTime: localISOTime,
-          availabilityStatus: 'unchecked'
-        });
+        curatedItems.push({ ...dest, dateTime: localISOTime, availabilityStatus: 'unchecked' });
       });
       
       curatedItems.sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
       setItems(curatedItems);
       
-      // Automatically trigger mock availability checks
       curatedItems.forEach(item => {
         setTimeout(() => checkAvailability(item.id), 500);
       });
@@ -151,7 +141,7 @@ export default function App() {
     }
   };
 
-  // ====== SIMULATED AVAILABILITY CHECK (NO API KEY REQUIRED) ======
+  // ====== SIMULATED AVAILABILITY CHECK ======
   const checkAvailability = async (id: string) => {
     const item = items.find(i => i.id === id);
     if (!item) return;
@@ -159,10 +149,7 @@ export default function App() {
     setItems(prev => prev.map(i => i.id === id ? { ...i, availabilityStatus: 'checking' } : i));
 
     try {
-      // 1. Simulate network ping
       await new Promise(resolve => setTimeout(resolve, 1200));
-
-      // 2. 80% chance of being available, 20% chance fully booked for realism
       const isAvailable = Math.random() > 0.2;
       
       setItems(prev => prev.map(i => i.id === id ? { 
@@ -179,7 +166,7 @@ export default function App() {
     }
   };
 
-  const TAX_RATE = 0.04712; // Hawaii GET rate
+  const TAX_RATE = 0.04712; 
   const subtotal = useMemo(() => items.reduce((acc, item) => acc + item.fee, 0), [items]);
   const taxes = subtotal * TAX_RATE;
   const total = subtotal + GREEN_FEE + donation + taxes;
@@ -195,7 +182,6 @@ export default function App() {
     const newItem = { ...dest, dateTime: dateTimeStr, availabilityStatus: 'unchecked' as const };
     setItems([...items, newItem]);
     
-    // Automatically check availability after a short delay
     setTimeout(() => {
       checkAvailability(dest.id);
     }, 500);
@@ -203,6 +189,27 @@ export default function App() {
 
   const updateDateTime = (id: string, val: string) => {
     setItems(items.map(item => item.id === id ? { ...item, dateTime: val, availabilityStatus: 'unchecked' as const } : item));
+  };
+
+  // ====== OPEN GOOGLE MAPS FUNCTION ======
+  const openGoogleMaps = () => {
+    const allPoints = [];
+    if (startLocation) allPoints.push(startLocation);
+    items.forEach(i => allPoints.push(`${i.name}, ${i.location}`));
+    if (endLocation) allPoints.push(endLocation);
+
+    if (allPoints.length === 0) return;
+    if (allPoints.length === 1) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(allPoints[0])}`, '_blank');
+      return;
+    }
+
+    const origin = encodeURIComponent(allPoints[0]);
+    const destination = encodeURIComponent(allPoints[allPoints.length - 1]);
+    const waypoints = allPoints.slice(1, -1).map(p => encodeURIComponent(p)).join('|');
+    
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=driving`;
+    window.open(url, '_blank');
   };
 
   return (
@@ -248,6 +255,42 @@ export default function App() {
           {/* Left Column: Itinerary & Browse */}
           <div className="lg:w-[60%] space-y-12">
             
+            {/* RESTORED: Wayfinding Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 ml-1">
+                <Navigation size={18} className="text-[#5A5A40]" />
+                <h2 className="text-xl font-serif font-bold text-[#1A1A1A]">Wayfinding</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F5F5F0] p-4 rounded-3xl border border-[#E5E5E5]">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5A5A40] ml-1">Original Location</label>
+                  <div className="relative">
+                    <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8E9299]" />
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Daniel K. Inouye Airport" 
+                      value={startLocation}
+                      onChange={(e) => setStartLocation(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 bg-white border border-[#E5E5E5] rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-[#5A5A40]/20 transition-all"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5A5A40] ml-1">Ending Location</label>
+                  <div className="relative">
+                    <Flag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8E9299]" />
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Your Hotel / Waikiki" 
+                      value={endLocation}
+                      onChange={(e) => setEndLocation(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 bg-white border border-[#E5E5E5] rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-[#5A5A40]/20 transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* AI Itinerary Curator */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 ml-1">
@@ -335,9 +378,22 @@ export default function App() {
 
             {/* Your Itinerary Section */}
             <section className="space-y-6">
-              <div className="flex items-center gap-2 ml-1">
-                <Calendar size={18} className="text-[#5A5A40]" />
-                <h2 className="text-xl font-serif font-bold text-[#1A1A1A]">Your Itinerary</h2>
+              {/* RESTORED: Get Directions Button Layout */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2 ml-1">
+                  <Calendar size={18} className="text-[#5A5A40]" />
+                  <h2 className="text-xl font-serif font-bold text-[#1A1A1A]">Your Itinerary</h2>
+                </div>
+                
+                {items.length > 0 && (
+                  <button 
+                    onClick={openGoogleMaps}
+                    className="flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-white border border-[#E5E5E5] text-[#5A5A40] hover:bg-[#F5F5F0] transition-all shadow-sm"
+                  >
+                    <Navigation size={14} />
+                    Get Directions
+                  </button>
+                )}
               </div>
 
               <div className="space-y-3">
