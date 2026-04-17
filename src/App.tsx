@@ -6,7 +6,7 @@
 import { useState, useMemo } from 'react';
 import { 
   Home, 
-  Map, 
+  Map as MapIcon, 
   Ticket, 
   ShoppingCart, 
   Trash2, 
@@ -24,9 +24,11 @@ import {
   Navigation,
   Flag,
   Sparkles,
-  Calendar
+  Calendar,
+  List
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Map, Overlay, ZoomControl } from 'pigeon-maps';
 
 interface DestinationItem {
   id: string;
@@ -37,36 +39,61 @@ interface DestinationItem {
   fee: number;
   dateTime: string;
   website: string;
+  lat: number;
+  lng: number;
   availabilityStatus?: 'unchecked' | 'checking' | 'available' | 'unavailable' | 'error';
   availabilityMessage?: string;
 }
 
 const DESTINATIONS_DATA: Record<string, DestinationItem[]> = {
   'Honolulu (Oahu)': [
-    { id: 'o1', name: 'Hanauma Bay Nature Preserve', location: 'Oahu - City & County', county: 'Honolulu (Oahu)', category: 'State Parks', fee: 25.00, dateTime: '', website: 'https://www.honolulu.gov/parks-hbay/home.html' },
-    { id: 'o2', name: 'Diamond Head State Monument', location: 'Oahu - State DLNR', county: 'Honolulu (Oahu)', category: 'State Parks', fee: 10.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/oahu/diamond-head-state-monument/' },
-    { id: 'o3', name: 'Pearl Harbor National Memorial', location: 'Oahu - National Park Service', county: 'Honolulu (Oahu)', category: 'National Parks', fee: 1.00, dateTime: '', website: 'https://www.nps.gov/valr/index.htm' },
-    { id: 'o4', name: 'Ahupua\'a \'O Kahana State Park', location: 'Oahu - State DLNR', county: 'Honolulu (Oahu)', category: 'State Parks', fee: 0.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/oahu/ahupuaa-o-kahana-state-park/' },
-    { id: 'o10', name: 'Bishop Museum', location: 'Honolulu - Private', county: 'Honolulu (Oahu)', category: 'Museums & Culture', fee: 25.00, dateTime: '', website: 'https://www.bishopmuseum.org/' },
-    { id: 'o12', name: 'Polynesian Cultural Center', location: 'Laie - Private', county: 'Honolulu (Oahu)', category: 'Museums & Culture', fee: 80.00, dateTime: '', website: 'https://www.polynesia.com/' }
+    { id: 'o1', name: 'Hanauma Bay Nature Preserve', location: 'Oahu - City & County', county: 'Honolulu (Oahu)', category: 'State Parks', fee: 25.00, dateTime: '', website: 'https://www.honolulu.gov/parks-hbay/home.html', lat: 21.2690, lng: -157.6938 },
+    { id: 'o2', name: 'Diamond Head State Monument', location: 'Oahu - State DLNR', county: 'Honolulu (Oahu)', category: 'State Parks', fee: 10.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/oahu/diamond-head-state-monument/', lat: 21.2618, lng: -157.8045 },
+    { id: 'o3', name: 'Pearl Harbor National Memorial', location: 'Oahu - National Park Service', county: 'Honolulu (Oahu)', category: 'National Parks', fee: 1.00, dateTime: '', website: 'https://www.nps.gov/valr/index.htm', lat: 21.3650, lng: -157.9396 },
+    { id: 'o4', name: 'Ahupua\'a \'O Kahana State Park', location: 'Oahu - State DLNR', county: 'Honolulu (Oahu)', category: 'State Parks', fee: 0.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/oahu/ahupuaa-o-kahana-state-park/', lat: 21.5560, lng: -157.8760 },
+    { id: 'o10', name: 'Bishop Museum', location: 'Honolulu - Private', county: 'Honolulu (Oahu)', category: 'Museums & Culture', fee: 25.00, dateTime: '', website: 'https://www.bishopmuseum.org/', lat: 21.3333, lng: -157.8711 },
+    { id: 'o12', name: 'Polynesian Cultural Center', location: 'Laie - Private', county: 'Honolulu (Oahu)', category: 'Museums & Culture', fee: 80.00, dateTime: '', website: 'https://www.polynesia.com/', lat: 21.6390, lng: -157.9200 }
   ],
   'Maui County': [
-    { id: 'm1', name: 'Haleakalā National Park', location: 'Maui - National Park Service', county: 'Maui County', category: 'National Parks', fee: 30.00, dateTime: '', website: 'https://www.nps.gov/hale/index.htm' },
-    { id: 'm2', name: 'Iao Valley State Monument', location: 'Maui - State DLNR', county: 'Maui County', category: 'State Parks', fee: 5.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/maui/iao-valley-state-monument/' },
-    { id: 'm3', name: 'Wai\'anapanapa State Park', location: 'Maui - State DLNR', county: 'Maui County', category: 'State Parks', fee: 10.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/maui/waianapanapa-state-park/' }
+    { id: 'm1', name: 'Haleakalā National Park', location: 'Maui - National Park Service', county: 'Maui County', category: 'National Parks', fee: 30.00, dateTime: '', website: 'https://www.nps.gov/hale/index.htm', lat: 20.7161, lng: -156.1736 },
+    { id: 'm2', name: 'Iao Valley State Monument', location: 'Maui - State DLNR', county: 'Maui County', category: 'State Parks', fee: 5.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/maui/iao-valley-state-monument/', lat: 20.8803, lng: -156.5445 },
+    { id: 'm3', name: 'Wai\'anapanapa State Park', location: 'Maui - State DLNR', county: 'Maui County', category: 'State Parks', fee: 10.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/maui/waianapanapa-state-park/', lat: 20.7844, lng: -155.9961 }
   ],
   'Hawaii (Big Island)': [
-    { id: 'h1', name: 'Hawai\'i Volcanoes National Park', location: 'Big Island - NPS', county: 'Hawaii (Big Island)', category: 'National Parks', fee: 30.00, dateTime: '', website: 'https://www.nps.gov/havo/index.htm' },
-    { id: 'h2', name: 'Akaka Falls State Park', location: 'Big Island - State DLNR', county: 'Hawaii (Big Island)', category: 'State Parks', fee: 5.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/hawaii/akaka-falls-state-park/' },
-    { id: 'h3', name: 'Pu\'uhonua o Hōnaunau', location: 'Big Island - NPS', county: 'Hawaii (Big Island)', category: 'National Parks', fee: 20.00, dateTime: '', website: 'https://www.nps.gov/puho/index.htm' }
+    { id: 'h1', name: 'Hawai\'i Volcanoes National Park', location: 'Big Island - NPS', county: 'Hawaii (Big Island)', category: 'National Parks', fee: 30.00, dateTime: '', website: 'https://www.nps.gov/havo/index.htm', lat: 19.4194, lng: -155.2805 },
+    { id: 'h2', name: 'Akaka Falls State Park', location: 'Big Island - State DLNR', county: 'Hawaii (Big Island)', category: 'State Parks', fee: 5.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/hawaii/akaka-falls-state-park/', lat: 19.8533, lng: -155.1522 },
+    { id: 'h3', name: 'Pu\'uhonua o Hōnaunau', location: 'Big Island - NPS', county: 'Hawaii (Big Island)', category: 'National Parks', fee: 20.00, dateTime: '', website: 'https://www.nps.gov/puho/index.htm', lat: 19.4217, lng: -155.9125 }
   ],
   'Kauai': [
-    { id: 'k1', name: 'Waimea Canyon State Park', location: 'Kauai - State DLNR', county: 'Kauai', category: 'State Parks', fee: 10.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/kauai/waimea-canyon-state-park/' },
-    { id: 'k2', name: 'Ha\'ena State Park', location: 'Kauai - State DLNR', county: 'Kauai', category: 'State Parks', fee: 35.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/kauai/haena-state-park/' }
+    { id: 'k1', name: 'Waimea Canyon State Park', location: 'Kauai - State DLNR', county: 'Kauai', category: 'State Parks', fee: 10.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/kauai/waimea-canyon-state-park/', lat: 22.0744, lng: -159.6631 },
+    { id: 'k2', name: 'Ha\'ena State Park', location: 'Kauai - State DLNR', county: 'Kauai', category: 'State Parks', fee: 35.00, dateTime: '', website: 'https://dlnr.hawaii.gov/dsp/parks/kauai/haena-state-park/', lat: 22.2198, lng: -159.5750 }
   ]
 };
 
-const GREEN_FEE = 5.00;
+const getCategoryColor = (category: string) => {
+  switch (category) {
+    case 'State Parks': return '#2E7D32'; 
+    case 'National Parks': return '#00695C'; 
+    case 'Museums & Culture': return '#1565C0'; 
+    case 'Botanical Gardens': return '#AD1457'; 
+    case 'Historic Sites': return '#F57F17'; 
+    default: return '#5A5A40';
+  }
+};
+
+const getMapCenter = (county: string): [number, number] => {
+  switch (county) {
+    case 'Honolulu (Oahu)': return [21.4389, -158.0001];
+    case 'Maui County': return [20.7984, -156.3319];
+    case 'Hawaii (Big Island)': return [19.5000, -155.5000];
+    case 'Kauai': return [22.0964, -159.5261];
+    default: return [21.0943, -157.4983];
+  }
+};
+
+const getMapZoom = (county: string): number => {
+  return county === 'Hawaii (Big Island)' ? 8 : 10;
+};
 
 export default function App() {
   const [items, setItems] = useState<DestinationItem[]>([]);
@@ -76,6 +103,10 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState<'All' | 'State Parks' | 'National Parks' | 'Museums & Culture' | 'Botanical Gardens' | 'Historic Sites'>('All');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
+  // UI State
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [selectedMapItem, setSelectedMapItem] = useState<DestinationItem | null>(null);
+
   // Wayfinding State
   const [startLocation, setStartLocation] = useState("");
   const [endLocation, setEndLocation] = useState("");
@@ -169,7 +200,7 @@ export default function App() {
   const TAX_RATE = 0.04712; 
   const subtotal = useMemo(() => items.reduce((acc, item) => acc + item.fee, 0), [items]);
   const taxes = subtotal * TAX_RATE;
-  const total = subtotal + GREEN_FEE + donation + taxes;
+  const total = subtotal + donation + taxes;
 
   const removeItem = (id: string) => {
     setItems(items.filter(item => item.id !== id));
@@ -191,7 +222,6 @@ export default function App() {
     setItems(items.map(item => item.id === id ? { ...item, dateTime: val, availabilityStatus: 'unchecked' as const } : item));
   };
 
-  // ====== OPEN GOOGLE MAPS FUNCTION ======
   const openGoogleMaps = () => {
     const allPoints = [];
     if (startLocation) allPoints.push(startLocation);
@@ -212,9 +242,10 @@ export default function App() {
     window.open(url, '_blank');
   };
 
+  const filteredDestinations = DESTINATIONS_DATA[activeTab].filter(dest => activeCategory === 'All' || dest.category === activeCategory);
+
   return (
     <div className="min-h-screen bg-[#FDFCFB] text-[#1A1A1A] font-sans pb-20">
-      {/* Navigation Bar */}
       <nav className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-[#E5E5E5]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
@@ -225,7 +256,7 @@ export default function App() {
             
             <div className="hidden md:flex items-center space-x-8 text-sm font-medium">
               <a href="#" className="text-[#5A5A40] hover:opacity-70 flex items-center gap-1.5"><Home size={16} /> Home</a>
-              <a href="#browse" className="text-[#1A1A1A] hover:opacity-70 flex items-center gap-1.5"><Map size={16} /> All Parks</a>
+              <a href="#browse" className="text-[#1A1A1A] hover:opacity-70 flex items-center gap-1.5"><MapIcon size={16} /> All Parks</a>
               <a href="#" className="text-[#1A1A1A] hover:opacity-70 flex items-center gap-1.5"><Ticket size={16} /> My Permits</a>
             </div>
 
@@ -252,10 +283,8 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
           
-          {/* Left Column: Itinerary & Browse */}
           <div className="lg:w-[60%] space-y-12">
             
-            {/* RESTORED: Wayfinding Section */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 ml-1">
                 <Navigation size={18} className="text-[#5A5A40]" />
@@ -291,7 +320,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* AI Itinerary Curator */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 ml-1">
                 <Sparkles size={18} className="text-[#5A5A40]" />
@@ -376,9 +404,7 @@ export default function App() {
               </section>
             </div>
 
-            {/* Your Itinerary Section */}
             <section className="space-y-6">
-              {/* RESTORED: Get Directions Button Layout */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2 ml-1">
                   <Calendar size={18} className="text-[#5A5A40]" />
@@ -448,7 +474,6 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Availability Status Indicator */}
                         <div className="mt-2 flex flex-wrap items-center gap-4">
                           {item.availabilityStatus === 'checking' && (
                             <div className="flex items-center gap-1.5 text-[9px] text-[#5A5A40] font-medium animate-pulse">
@@ -473,12 +498,27 @@ export default function App() {
               </div>
             </section>
 
-            {/* Browse All Destinations Section */}
             <section id="browse" className="space-y-6 pt-8 border-t border-[#E5E5E5]">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 ml-1">
-                  <Map size={18} className="text-[#5A5A40]" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 ml-1">
+                <div className="flex items-center gap-2">
+                  <MapIcon size={18} className="text-[#5A5A40]" />
                   <h2 className="text-xl font-serif font-bold text-[#1A1A1A]">Browse Destinations</h2>
+                </div>
+                
+                {/* List / Map View Toggle */}
+                <div className="flex bg-[#F5F5F0] rounded-lg p-1 border border-[#E5E5E5] self-start sm:self-auto">
+                  <button 
+                    onClick={() => { setViewMode('list'); setSelectedMapItem(null); }}
+                    className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-[#1A1A1A]' : 'text-[#8E9299] hover:text-[#1A1A1A]'}`}
+                  >
+                    <List size={14} /> List
+                  </button>
+                  <button 
+                    onClick={() => setViewMode('map')}
+                    className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-md transition-all ${viewMode === 'map' ? 'bg-white shadow-sm text-[#1A1A1A]' : 'text-[#8E9299] hover:text-[#1A1A1A]'}`}
+                  >
+                    <MapPin size={14} /> Map
+                  </button>
                 </div>
               </div>
 
@@ -487,9 +527,9 @@ export default function App() {
                   {Object.keys(DESTINATIONS_DATA).map((county) => (
                     <button
                       key={county}
-                      onClick={() => setActiveTab(county)}
+                      onClick={() => { setActiveTab(county); setSelectedMapItem(null); }}
                       className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
-                        activeTab === county ? 'bg-[#5A5A40] text-white shadow-md' : 'bg-white border border-[#E5E5E5] text-[#8E9299]'
+                        activeTab === county ? 'bg-[#5A5A40] text-white shadow-md' : 'bg-white border border-[#E5E5E5] text-[#8E9299] hover:border-[#5A5A40]/30'
                       }`}
                     >
                       {county}
@@ -498,39 +538,125 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3">
-                {DESTINATIONS_DATA[activeTab]
-                  .filter(dest => activeCategory === 'All' || dest.category === activeCategory)
-                  .map((dest) => {
-                  const isInCart = items.some(i => i.id === dest.id);
-                  return (
-                    <motion.div layout key={dest.id} className="bg-white rounded-xl border border-[#E5E5E5] overflow-hidden flex shadow-sm hover:border-[#5A5A40]/30 transition-all">
-                      <div className="flex-1 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-bold text-[#1A1A1A] truncate">{dest.name}</h4>
-                          <p className="text-[10px] text-[#8E9299] truncate">{dest.location}</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <p className="text-sm font-bold text-[#5A5A40]">${dest.fee.toFixed(2)}</p>
+              {/* Dynamic Rendering: Map vs List */}
+              {viewMode === 'map' ? (
+                <div className="space-y-4">
+                  <div className="w-full h-[500px] rounded-2xl overflow-hidden border border-[#E5E5E5] relative bg-[#F5F5F0]">
+                    <Map 
+                      center={getMapCenter(activeTab)} 
+                      zoom={getMapZoom(activeTab)} 
+                      provider={(x, y, z, dpr) => `https://a.basemaps.cartocdn.com/light_all/${z}/${x}/${y}${dpr >= 2 ? '@2x' : ''}.png`}
+                    >
+                      <ZoomControl />
+                      {filteredDestinations.map(dest => (
+                        <Overlay key={dest.id} anchor={[dest.lat, dest.lng]} offset={[8, 8]}>
+                           <div 
+                             onClick={() => setSelectedMapItem(dest)} 
+                             className="w-4 h-4 rounded-full border-2 border-white cursor-pointer hover:scale-125 transition-transform"
+                             style={{ 
+                               backgroundColor: getCategoryColor(dest.category),
+                               boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                             }} 
+                           />
+                        </Overlay>
+                      ))}
+                    </Map>
+
+                    {/* Interactive Map Overlay Card */}
+                    <AnimatePresence>
+                      {selectedMapItem && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 20 }}
+                          className="absolute bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-[300px] bg-white p-4 rounded-xl shadow-xl border border-[#E5E5E5] z-[1000]"
+                        >
                           <button 
-                            onClick={() => addItem(dest)}
-                            disabled={isInCart}
-                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                              isInCart ? 'bg-[#E8F5E9] text-[#2E7D32] cursor-default' : 'bg-[#5A5A40] text-white hover:bg-[#4A4A30] active:scale-95'
-                            }`}
+                            onClick={() => setSelectedMapItem(null)}
+                            className="absolute top-3 right-3 text-[#8E9299] hover:text-[#1A1A1A] p-1 rounded-full hover:bg-[#F5F5F0] transition-colors"
                           >
-                            {isInCart ? 'Added' : <><Plus size={12} /> Add</>}
+                            <X size={16} />
                           </button>
-                        </div>
+                          <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded text-white mb-2 inline-block" style={{ backgroundColor: getCategoryColor(selectedMapItem.category) }}>
+                             {selectedMapItem.category}
+                          </span>
+                          <h4 className="font-bold text-base text-[#1A1A1A] mb-1 leading-tight pr-6">{selectedMapItem.name}</h4>
+                          <p className="text-[10px] text-[#8E9299] mb-4 flex items-center gap-1 font-medium">
+                            <MapPin size={10} /> {selectedMapItem.location}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-lg font-bold text-[#5A5A40]">${selectedMapItem.fee.toFixed(2)}</p>
+                            <button 
+                              onClick={() => {
+                                 addItem(selectedMapItem);
+                                 setSelectedMapItem(null);
+                              }}
+                              disabled={items.some(i => i.id === selectedMapItem.id)}
+                              className="bg-[#5A5A40] disabled:bg-[#E8F5E9] disabled:text-[#2E7D32] text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-[#4A4A30] transition-colors"
+                            >
+                              {items.some(i => i.id === selectedMapItem.id) ? 'Added to Itinerary' : 'Add to Itinerary'}
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Map Category Legend */}
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 px-2 pb-2">
+                    {[
+                      { label: 'State Parks', color: '#2E7D32' },
+                      { label: 'National Parks', color: '#00695C' },
+                      { label: 'Museums & Culture', color: '#1565C0' },
+                      { label: 'Botanical Gardens', color: '#AD1457' },
+                      { label: 'Historic Sites', color: '#F57F17' }
+                    ].map(cat => (
+                      <div key={cat.label} className="flex items-center gap-1.5 text-[10px] font-bold text-[#8E9299] uppercase tracking-wider">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                        {cat.label}
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {filteredDestinations.map((dest) => {
+                    const isInCart = items.some(i => i.id === dest.id);
+                    return (
+                      <motion.div layout key={dest.id} className="bg-white rounded-xl border border-[#E5E5E5] overflow-hidden flex shadow-sm hover:border-[#5A5A40]/30 transition-all">
+                        <div className="flex-1 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: getCategoryColor(dest.category) }}>
+                                {dest.category}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-bold text-[#1A1A1A] truncate">{dest.name}</h4>
+                            <p className="text-[10px] text-[#8E9299] truncate">{dest.location}</p>
+                          </div>
+                          <div className="flex items-center justify-between sm:justify-end gap-4 sm:w-auto w-full">
+                            <div className="flex flex-col items-start sm:items-end">
+                              <p className="text-sm font-bold text-[#5A5A40]">${dest.fee.toFixed(2)}</p>
+                            </div>
+                            <button 
+                              onClick={() => addItem(dest)}
+                              disabled={isInCart}
+                              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                isInCart ? 'bg-[#E8F5E9] text-[#2E7D32] cursor-default' : 'bg-[#5A5A40] text-white hover:bg-[#4A4A30] active:scale-95'
+                              }`}
+                            >
+                              {isInCart ? 'Added' : <><Plus size={12} /> Add</>}
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           </div>
 
-          {/* Right Column: Summary & Checkout */}
           <div className="lg:w-[40%] xl:w-[35%]">
             <div className="lg:sticky lg:top-24 space-y-6">
               <div className="bg-white rounded-[32px] border border-[#E5E5E5] p-8 shadow-sm">
@@ -538,12 +664,36 @@ export default function App() {
                 
                 <div className="space-y-4 mb-8">
                   <div className="flex justify-between text-sm">
-                    <span className="text-[#8E9299]">Subtotal</span>
+                    <span className="text-[#8E9299]">Subtotal ({items.length} Destinations)</span>
                     <span className="font-bold">${subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm items-center">
-                    <span className="text-[#8E9299]">Taxes & Fees</span>
+                    <span className="text-[#8E9299] flex items-center gap-1.5">
+                      Taxes & Fees
+                    </span>
                     <span className="font-bold">${taxes.toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="pt-4 border-t border-[#F5F5F0]">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-bold text-[#5A5A40]">Mālama Voluntary Donation</span>
+                      <span className="text-sm font-bold">${donation}</span>
+                    </div>
+                    <p className="text-[10px] text-[#8E9299] mb-4">Support reforestation and coral reef protection efforts across the islands.</p>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      step="5"
+                      value={donation}
+                      onChange={(e) => setDonation(parseInt(e.target.value))}
+                      className="w-full h-1.5 bg-[#F5F5F0] rounded-lg appearance-none cursor-pointer accent-[#5A5A40]"
+                    />
+                    <div className="flex justify-between text-[10px] font-bold text-[#8E9299] mt-2">
+                      <span>$0</span>
+                      <span>$50</span>
+                      <span>$100</span>
+                    </div>
                   </div>
                 </div>
 
@@ -567,7 +717,6 @@ export default function App() {
         </div>
       </main>
 
-      {/* Success Overlay */}
       <AnimatePresence>
         {showSuccess && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
